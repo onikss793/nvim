@@ -124,6 +124,7 @@ require('lazy').setup({
     config = function()
       require('onedark').setup { style = 'warm' }
       require('onedark').load()
+      vim.cmd 'colorscheme onedark'
     end,
   },
 
@@ -567,7 +568,7 @@ require('lazy').setup({
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
         if disable_filetypes[vim.bo[bufnr].filetype] then return nil end
-        return { timeout_ms = 500, lsp_format = 'fallback' }
+        return { timeout_ms = 3000, lsp_format = 'fallback' }
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
