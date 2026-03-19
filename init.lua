@@ -155,7 +155,7 @@ require('lazy').setup({
       vim.g.gruvbox_material_background = 'soft' -- 'hard', 'medium', 'soft'
       vim.g.gruvbox_material_foreground = 'material' -- 'material', 'mix', 'original'
       vim.g.gruvbox_material_better_performance = 1
-      vim.cmd 'colorscheme gruvbox-material'
+      -- vim.cmd 'colorscheme gruvbox-material'
     end,
   },
 
@@ -307,7 +307,16 @@ require('lazy').setup({
     'neovim/nvim-lspconfig',
     dependencies = {
       { 'mason-org/mason.nvim', opts = {} },
-      'WhoIsSethDaniel/mason-tool-installer.nvim',
+      {
+        'WhoIsSethDaniel/mason-tool-installer.nvim',
+        opts = {
+          ensure_installed = {
+            'pyright',
+            'ruff',
+            'ruff-lsp',
+          },
+        },
+      },
       { 'j-hui/fidget.nvim', opts = {} },
       'saghen/blink.cmp',
     },
@@ -441,8 +450,30 @@ require('lazy').setup({
           filetypes = { 'html', 'css', 'javascriptreact', 'typescriptreact', 'vue', 'svelte' },
         },
 
-        -- Python
-        pyright = {},
+        -- Python: auto-detect uv (.venv) and conda environments
+        pyright = {
+          on_init = function(client)
+            local root = client.config.root_dir or vim.fn.getcwd()
+            local venv_python = root .. '/.venv/bin/python'
+            local python_path
+
+            if vim.fn.executable(venv_python) == 1 then
+              python_path = venv_python
+            else
+              local conda_env = os.getenv 'CONDA_PREFIX'
+              if conda_env then python_path = conda_env .. '/bin/python' end
+            end
+
+            if python_path then
+              -- Update client.settings (what neovim returns for workspace/configuration)
+              client.settings = vim.tbl_deep_extend('force', client.settings or {}, {
+                python = { pythonPath = python_path },
+              })
+              -- Tell pyright to re-request workspace config (settings = nil is intentional)
+              client:notify('workspace/didChangeConfiguration', { settings = nil })
+            end
+          end,
+        },
 
         -- Lua (for editing this config)
         lua_ls = {},
@@ -552,6 +583,8 @@ require('lazy').setup({
         -- markdown = { 'prettier' },
         yaml = { 'prettier' },
         python = { 'isort', 'black' },
+        -- python = { 'ruff_format' },
+
         go = { 'gofumpt', 'goimports' },
       },
       formatters = {
@@ -596,7 +629,9 @@ require('lazy').setup({
         ['<C-j>'] = { 'select_next', 'fallback' },
         ['<C-k>'] = { 'select_prev', 'fallback' },
       },
-      appearance = { nerd_font_variant = 'mono' },
+      appearance = {
+        nerd_font_variant = 'normal',
+      },
       completion = {
         documentation = { auto_show = true, auto_show_delay_ms = 300 },
       },
